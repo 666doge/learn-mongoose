@@ -49,19 +49,17 @@ module.exports = {
             ctx.body = Result.success('文章列表查询成功', data);
         }
     },
-    getArticle (ctx){
+    async getArticle(ctx) {
         let articleId = ctx.params._id
-        articleModel
+        let doc = await articleModel
             .findOne({_id: articleId})
-            .populate('funs')
-            .exec(function (err, doc) {
-                if (err) {
-                    ctx.body = Result.error('文章查询失败');
-                } else {
-                    ctx.body = Result.success('文章列表查询成功', doc);
-                }
-            });
-
+            .populate('funs', 'username -_id')
+            .populate('hates', 'username -_id')
+        if (!doc || doc.errors) {
+            ctx.body = Result.error('文章查询失败!!!');
+        } else {
+            ctx.body = Result.success('文章列表查询成功', doc);
+        }
     },
     async updateArticle(ctx) {
         var _id = ctx.params._id;
@@ -121,59 +119,51 @@ module.exports = {
     async addFuns(ctx) {
         let articleId = ctx.params._id;
         let user = ctx.request.body.user;
-        await articleModel.findOne({_id: articleId}, async (error, article) => {
-            if (error) {
-                console.log(error);
-                return;
-            }
-            if (!article) {
-                ctx.body = Result.error('未找到该文章，请查看article id');
-            } else {
-                let funs = article.funs
-                let idx = funs.indexOf(user)
-                try {
-                    if (idx !== -1) {
-                        funs.splice(idx, 1)
-                        article.save();
-                        ctx.body = Result.success('取消赞')
-                    } else {
-                        funs.push(user)
-                        article.save();
-                        ctx.body = Result.success('赞了一下')
-                    }
-                } catch (e) {
-                    ctx.body = Result.error()
+        let article = await articleModel.findOne({_id: articleId})
+
+        if (!article || article.errors) {
+            ctx.body = Result.error('未找到该文章，请查看article id');
+        } else {
+            let funs = article.funs
+            let idx = funs.indexOf(user)
+            try {
+                if (idx !== -1) {
+                    funs.splice(idx, 1)
+                    article.save();
+                    ctx.body = Result.success('取消赞')
+                } else {
+                    funs.push(user)
+                    article.save();
+                    ctx.body = Result.success('赞了一下')
                 }
+            } catch (e) {
+                ctx.body = Result.error()
             }
-        })
+        }
+
     },
     async addHates(ctx) {
         let articleId = ctx.params._id;
         let user = ctx.request.body.user;
-        await articleModel.findOne({_id: articleId}, async (error, article) => {
-            if (error) {
-                console.log(error);
-                return;
-            }
-            if (!article) {
-                ctx.body = Result.error('未找到该文章，请查看article id');
-            } else {
-                let hates = article.hates
-                let idx = hates.indexOf(user)
-                try {
-                    if (idx !== -1) {
-                        hates.splice(idx, 1)
-                        article.save();
-                        ctx.body = Result.success('取消踩')
-                    } else {
-                        hates.push(user)
-                        article.save();
-                        ctx.body = Result.success('踩了一下')
-                    }
-                } catch (e) {
-                    ctx.body = Result.success()
+        let article = await articleModel.findOne({_id: articleId})
+        if (!article || article.errors) {
+            ctx.body = Result.error('未找到该文章，请查看article id');
+        } else {
+            let hates = article.hates
+            let idx = hates.indexOf(user)
+            try {
+                if (idx !== -1) {
+                    hates.splice(idx, 1)
+                    article.save();
+                    ctx.body = Result.success('取消踩')
+                } else {
+                    hates.push(user)
+                    article.save();
+                    ctx.body = Result.success('踩了一下')
                 }
+            } catch (e) {
+                ctx.body = Result.success()
             }
-        })
+        }
     }
 }
